@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+  
+
+// ─────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  AUTHOR
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+// ─────────────────────────────────────────
+// USER
+// ─────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  emailVerified DateTime? 
+  image     String?
+  role      Role     @default(AUTHOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts    Post[]
+  accounts Account[]
+  sessions Session[]
+
+  @@index([email])
+}
+
+// ─────────────────────────────────────────
+// POST
+// ─────────────────────────────────────────
+
+model Post {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  excerpt     String?
+  content     String     @db.Text
+  coverImage  String?
+  status      PostStatus @default(DRAFT)
+  viewCount   Int        @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  tags Tag[] @relation("PostTags")
+
+  @@index([slug])
+  @@index([publishedAt])
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([authorId])
+  @@index([viewCount(sort: Desc)])
+}
+
+// ─────────────────────────────────────────
+// TAG
+// ─────────────────────────────────────────
+
+model Tag {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+
+  posts Post[] @relation("PostTags")
+
+  @@index([slug])
+}
+
+// ─────────────────────────────────────────
+// SITE SETTINGS — Singleton pattern
+// ─────────────────────────────────────────
+
+model SiteSettings {
+  id          String   @id @default("singleton")
+  siteTitle   String   @default("The Corporate Blog")
+  description String?  @db.Text
+  keywords    String?
+  githubUrl   String?
+  twitterUrl  String?
+  linkedinUrl String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+
+
+
+
+// ─────────────────────────────────────────
+// NEXT-AUTH MODELS
+// ─────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
