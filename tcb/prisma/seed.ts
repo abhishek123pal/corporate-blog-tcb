@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { PrismaClient, PostStatus, Role } from "@prisma/client"
 import { PrismaNeon } from "@prisma/adapter-neon"
 import { faker } from "@faker-js/faker"
