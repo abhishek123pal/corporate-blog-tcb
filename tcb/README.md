@@ -6,7 +6,7 @@ A high-performance, SEO-first blogging platform built on modern serverless archi
 
 ## Live Demo
 
-🔗 [View Live](https://your-app.vercel.app)
+🔗 [View Live](https://corporate-blog-tcb.vercel.app)
 
 ## Key Metrics
 
