@@ -12,7 +12,7 @@ export default function LoginPage() {
 
   function handleSignIn(provider: string) {
     setLoading(provider)
-    signIn(provider, { callbackUrl })  // await hatao — redirect khud hoti hai
+    signIn(provider, { callbackUrl }) 
   }
 
   return (
