@@ -46,7 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     select: { slug: true },
   })
 
-  const tagRoutes: MetadataRoute.Sitemap = tags.map((tag) => ({
+  const tagRoutes: MetadataRoute.Sitemap = tags.map((tag: { slug: string }) => ({
     url:             `${BASE_URL}/blog?tag=${tag.slug}`,
     lastModified:    new Date(),
     changeFrequency: "weekly",
