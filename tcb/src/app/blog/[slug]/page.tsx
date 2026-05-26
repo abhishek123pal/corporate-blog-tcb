@@ -126,7 +126,7 @@ export default async function BlogPostPage({ params }: Props) {
 
         {/* --- CONTENT --- */}
         <div className="flex flex-col gap-6">
-          {post.content.split("\n\n").map((para, i) => (
+          {post.content.split("\n\n").map((para: string, i: number) => (
             <p key={i} className="text-white/60 leading-relaxed text-lg">
               {para}
             </p>
