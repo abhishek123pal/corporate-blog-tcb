@@ -69,7 +69,7 @@ export default async function BlogPostPage({ params }: Props) {
         {/* --- TAGS --- */}
         {post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-6">
-            {post.tags.map((tag) => (
+            {post.tags.map((tag: { id: string; name: string; slug: string }) => (
               <Link
                 key={tag.id}
                 href={`/blog?tag=${tag.slug}`}
