@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 modifiedTime:  new Date(post.updatedAt).toISOString(),
 
       authors: post.author.name ? [post.author.name] : [],
-      tags: post.tags.map((t) => t.name),
+      tags: post.tags.map((t: { name: string }) => t.name),
       images: post.coverImage
         ? [{ url: post.coverImage, width: 1200, height: 630, alt: post.title }]
         : [],
