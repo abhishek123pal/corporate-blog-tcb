@@ -1,51 +1,49 @@
 "use client"
 
-import React, { useState, useTransition, useRef } from "react"
+import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { createPost, updatePost } from "@/services/post.service"
 import { Loader2, Save, Eye, Image as ImageIcon, Hash, Layout, Tag as TagIcon, XCircle } from "lucide-react"
 import type { PostWithAuthorAndCategory } from "@/types/post.types"
-import type { Tag } from "@prisma/client"
+import type { PostStatus, Tag } from "@prisma/client"
 
 // ─────────────────────────────────────────
-// TYPES & CONTRACTS
+// TYPES
 // ─────────────────────────────────────────
-
-export type PostStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED"
 
 interface PostFormProps {
   authorId: string
-  tags: Tag[]
-  post?: PostWithAuthorAndCategory
+  tags:     Tag[]
+  post?:    PostWithAuthorAndCategory
 }
 
 interface FormState {
-  title: string
-  slug: string
-  excerpt: string
-  content: string
+  title:      string
+  slug:       string
+  excerpt:    string
+  content:    string
   coverImage: string
-  status: PostStatus
-  tagIds: string[]
+  status:     PostStatus
+  tagIds:     string[]
 }
 
 interface FieldProps {
-  label: string
+  label:     string
   required?: boolean
-  children: React.ReactNode
-  hint?: string
-  icon?: React.ComponentType<{ size?: number; className?: string }>
+  hint?:     string
+  icon?:     React.ComponentType<{ size?: number; className?: string }>
+  children:  React.ReactNode
 }
 
 const containerVars = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+  hidden:  { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
 }
 
 const itemVars = {
-  hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0 }
+  hidden:  { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 },
 }
 
 // ─────────────────────────────────────────
@@ -53,7 +51,11 @@ const itemVars = {
 // ─────────────────────────────────────────
 
 function generateSlug(title: string): string {
-  return title.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-")
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
 }
 
 function Field({ label, required, children, hint, icon: Icon }: FieldProps) {
@@ -62,7 +64,7 @@ function Field({ label, required, children, hint, icon: Icon }: FieldProps) {
       <div className="flex items-center gap-2">
         {Icon && <Icon size={12} className="text-white/20" />}
         <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">
-          {label} {required && <span className="text-red-500/50">*</span>}
+          {label}{required && <span className="text-red-500/50 ml-1">*</span>}
         </label>
       </div>
       {children}
@@ -71,7 +73,8 @@ function Field({ label, required, children, hint, icon: Icon }: FieldProps) {
   )
 }
 
-const inputClass = "w-full px-4 py-3 rounded-xl border border-white/5 bg-white/[0.02] text-sm text-white/80 placeholder:text-white/10 focus:outline-none focus:border-white/20 focus:bg-white/[0.04] transition-all duration-200"
+const inputClass =
+  "w-full px-4 py-3 rounded-xl border border-white/5 bg-white/[0.02] text-sm text-white/80 placeholder:text-white/10 focus:outline-none focus:border-white/20 focus:bg-white/[0.04] transition-all duration-200"
 
 // ─────────────────────────────────────────
 // MAIN COMPONENT
@@ -81,19 +84,16 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [activeButton, setActiveButton] = useState<PostStatus | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  
-  // Track if the user has manually touched the slug input field
-  const isSlugUserModified = useRef(false)
+  const [error, setError]              = useState<string | null>(null)
 
   const [form, setForm] = useState<FormState>({
-    title: post?.title ?? "",
-    slug: post?.slug ?? "",
-    excerpt: post?.excerpt ?? "",
-    content: post?.content ?? "",
+    title:      post?.title      ?? "",
+    slug:       post?.slug       ?? "",
+    excerpt:    post?.excerpt    ?? "",
+    content:    post?.content    ?? "",
     coverImage: post?.coverImage ?? "",
-    status: (post?.status as PostStatus) ?? "DRAFT",
-    tagIds: post?.tags?.map((t) => t.id) ?? [],
+    status:     post?.status     ?? "DRAFT",
+    tagIds:     post?.tags?.map((t) => t.id) ?? [],
   })
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -102,22 +102,22 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
 
   function handleTitleChange(value: string) {
     update("title", value)
-    if (!post && !isSlugUserModified.current) {
-      update("slug", generateSlug(value))
-    }
+    if (!post) update("slug", generateSlug(value))
   }
 
   function toggleTag(tagId: string) {
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
-      tagIds: prev.tagIds.includes(tagId) ? prev.tagIds.filter(id => id !== tagId) : [...prev.tagIds, tagId]
+      tagIds: prev.tagIds.includes(tagId)
+        ? prev.tagIds.filter((id) => id !== tagId)
+        : [...prev.tagIds, tagId],
     }))
   }
 
   function handleSubmit(submitStatus: PostStatus) {
     if (isPending) return
     setError(null)
-    
+
     if (!form.title.trim() || !form.slug.trim() || !form.content.trim()) {
       setError("Please fill in all required fields.")
       return
@@ -125,10 +125,10 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
 
     setActiveButton(submitStatus)
     startTransition(async () => {
-      const response = post 
+      const response = post
         ? await updatePost({ ...form, status: submitStatus, id: post.id })
         : await createPost({ ...form, status: submitStatus }, authorId)
-      
+
       if (!response.success) {
         setError(response.error)
       } else {
@@ -140,27 +140,39 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
   }
 
   return (
-    <motion.div 
-      initial="hidden" animate="visible" variants={containerVars}
-      className="w-full max-w-350 mx-auto flex flex-col gap-8 pb-24"
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={containerVars}
+      className="w-full mx-auto flex flex-col gap-8 pb-24"
     >
       {/* Header */}
       <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold text-white tracking-tight">{post ? 'Edit Post' : 'New Post'}</h1>
-        <p className="text-sm text-white/40">Draft and publish your thoughts to the world.</p>
+        <h1 className="text-3xl font-bold text-white tracking-tight">
+          {post ? "Edit Post" : "New Post"}
+        </h1>
+        <p className="text-sm text-white/40">
+          Draft and publish your thoughts to the world.
+        </p>
       </div>
 
       <AnimatePresence mode="popLayout">
         {error && (
-          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="flex items-center gap-3 p-4 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-400">
-            <XCircle size={16} /> {error}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center gap-3 p-4 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-400"
+          >
+            <XCircle size={16} />
+            {error}
           </motion.div>
         )}
       </AnimatePresence>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-        {/* Main Content Area */}
+
+        {/* Main Content */}
         <div className="lg:col-span-8 flex flex-col gap-8">
           <motion.div variants={itemVars} className="space-y-6">
             <Field label="Title" required icon={Layout}>
@@ -169,7 +181,7 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
                 value={form.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="The Future of Web Development..."
-                className={`${inputClass} text-xl font-medium py-5 border-white/10`}
+                className={inputClass + " text-xl font-medium py-5 border-white/10"}
               />
             </Field>
 
@@ -177,10 +189,7 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
               <input
                 type="text"
                 value={form.slug}
-                onChange={(e) => {
-                  isSlugUserModified.current = true
-                  update("slug", e.target.value)
-                }}
+                onChange={(e) => update("slug", e.target.value)}
                 className={inputClass}
               />
             </Field>
@@ -190,7 +199,7 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
                 value={form.excerpt}
                 onChange={(e) => update("excerpt", e.target.value)}
                 rows={3}
-                className={`${inputClass} resize-none`}
+                className={inputClass + " resize-none"}
                 placeholder="A short summary..."
               />
             </Field>
@@ -200,16 +209,17 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
                 value={form.content}
                 onChange={(e) => update("content", e.target.value)}
                 rows={20}
-                className={`${inputClass} font-mono text-xs leading-relaxed`}
-                placeholder="Write your markdown here..."
+                className={inputClass + " font-mono text-xs leading-relaxed"}
+                placeholder="Write your content here..."
               />
             </Field>
           </motion.div>
         </div>
 
-        {/* Sidebar Area */}
+        {/* Sidebar */}
         <div className="lg:col-span-4 flex flex-col gap-6">
-          {/* Status Card */}
+
+          {/* Status */}
           <motion.div variants={itemVars} className="p-6 rounded-2xl border border-white/5 bg-white/1">
             <Field label="Visibility" icon={Eye}>
               <div className="grid grid-cols-1 gap-2 mt-2">
@@ -219,7 +229,9 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
                     type="button"
                     onClick={() => update("status", s)}
                     className={`px-4 py-2.5 rounded-lg border text-xs font-medium transition-all text-left ${
-                      form.status === s ? "bg-white/10 border-white/20 text-white" : "border-transparent text-white/30 hover:text-white/50"
+                      form.status === s
+                        ? "bg-white/10 border-white/20 text-white"
+                        : "border-transparent text-white/30 hover:text-white/50"
                     }`}
                   >
                     {s}
@@ -229,7 +241,7 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
             </Field>
           </motion.div>
 
-          {/* Cover Image Card */}
+          {/* Cover Image */}
           <motion.div variants={itemVars} className="p-6 rounded-2xl border border-white/5 bg-white/1">
             <Field label="Cover Image" icon={ImageIcon}>
               <input
@@ -241,16 +253,19 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
               />
               <AnimatePresence>
                 {form.coverImage && (
-                  <motion.img 
-                    initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                    src={form.coverImage} className="mt-4 w-full aspect-video object-cover rounded-xl border border-white/10" 
+                  <motion.img
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    src={form.coverImage}
+                    alt="Cover preview"
+                    className="mt-4 w-full aspect-video object-cover rounded-xl border border-white/10"
                   />
                 )}
               </AnimatePresence>
             </Field>
           </motion.div>
 
-          {/* Tags Card */}
+          {/* Tags */}
           <motion.div variants={itemVars} className="p-6 rounded-2xl border border-white/5 bg-white/1">
             <Field label="Tags" icon={TagIcon}>
               <div className="flex flex-wrap gap-2 mt-2">
@@ -260,7 +275,9 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
                     type="button"
                     onClick={() => toggleTag(tag.id)}
                     className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
-                      form.tagIds.includes(tag.id) ? "bg-white text-black border-white" : "border-white/10 text-white/30 hover:border-white/20"
+                      form.tagIds.includes(tag.id)
+                        ? "bg-white text-black border-white"
+                        : "border-white/10 text-white/30 hover:border-white/20"
                     }`}
                   >
                     {tag.name.toUpperCase()}
@@ -269,333 +286,52 @@ export function PostForm({ authorId, tags, post }: PostFormProps) {
               </div>
             </Field>
           </motion.div>
+
         </div>
       </div>
 
       {/* Sticky Bottom Actions */}
-      <motion.div variants={itemVars} className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl z-50">
+      <motion.div
+        variants={itemVars}
+        className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl z-50"
+      >
         <button
           onClick={() => handleSubmit("PUBLISHED")}
           disabled={isPending}
           className="flex items-center gap-2 px-6 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-white/90 transition-all disabled:opacity-50"
         >
-          {activeButton === "PUBLISHED" ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+          {activeButton === "PUBLISHED" ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Eye size={14} />
+          )}
           Publish
         </button>
+
         <button
           onClick={() => handleSubmit("DRAFT")}
           disabled={isPending}
           className="flex items-center gap-2 px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white/60 hover:bg-white/10 transition-all disabled:opacity-50"
         >
-          {activeButton === "DRAFT" ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+          {activeButton === "DRAFT" ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <Save size={14} />
+          )}
           Save Draft
         </button>
+
         <div className="w-px h-4 bg-white/10 mx-2" />
-        <button onClick={() => router.back()} className="text-xs text-white/20 hover:text-white/50">Cancel</button>
+
+        <button
+          onClick={() => router.back()}
+          disabled={isPending}
+          className="text-xs text-white/20 hover:text-white/50 transition-colors"
+        >
+          Cancel
+        </button>
       </motion.div>
+
     </motion.div>
   )
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// "use client"
-
-// import { useState, useTransition } from "react"
-// import { useRouter } from "next/navigation"
-// import { motion, AnimatePresence } from "framer-motion"
-// import { createPost, updatePost } from "@/services/post.service"
-// import { Loader2, Save, Eye, Image as ImageIcon, Hash, Layout, Tag as TagIcon, XCircle } from "lucide-react"
-// import type { PostWithAuthorAndCategory } from "@/types/post.types"
-// import type { PostStatus, Tag } from "@prisma/client"
-
-// // ─────────────────────────────────────────
-// // TYPES & VARIANTS
-// // ─────────────────────────────────────────
-
-// interface PostFormProps {
-//   authorId: string
-//   tags: Tag[]
-//   post?: PostWithAuthorAndCategory
-// }
-
-// interface FormState {
-//   title: string
-//   slug: string
-//   excerpt: string
-//   content: string
-//   coverImage: string
-//   status: PostStatus
-//   tagIds: string[]
-// }
-
-// const containerVars = {
-//   hidden: { opacity: 0 },
-//   visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
-// }
-
-// const itemVars = {
-//   hidden: { opacity: 0, y: 10 },
-//   visible: { opacity: 1, y: 0 }
-// }
-
-// // ─────────────────────────────────────────
-// // HELPERS
-// // ─────────────────────────────────────────
-
-// function generateSlug(title: string): string {
-//   return title.toLowerCase().replace(/[^a-z0-9\s-]/g, "").trim().replace(/\s+/g, "-")
-// }
-
-// function Field({ label, required, children, hint, icon: Icon }: any) {
-//   return (
-//     <div className="flex flex-col gap-2">
-//       <div className="flex items-center gap-2">
-//         {Icon && <Icon size={12} className="text-white/20" />}
-//         <label className="text-[10px] font-bold text-white/30 uppercase tracking-[0.15em]">
-//           {label} {required && <span className="text-red-500/50">*</span>}
-//         </label>
-//       </div>
-//       {children}
-//       {hint && <p className="text-[10px] text-white/20 italic">{hint}</p>}
-//     </div>
-//   )
-// }
-
-// const inputClass = "w-full px-4 py-3 rounded-xl border border-white/5 bg-white/[0.02] text-sm text-white/80 placeholder:text-white/10 focus:outline-none focus:border-white/20 focus:bg-white/[0.04] transition-all duration-200"
-
-// // ─────────────────────────────────────────
-// // MAIN COMPONENT
-// // ─────────────────────────────────────────
-
-// export function PostForm({ authorId, tags, post }: PostFormProps) {
-//   const router = useRouter()
-//   const [isPending, startTransition] = useTransition()
-//   const [activeButton, setActiveButton] = useState<PostStatus | null>(null)
-//   const [error, setError] = useState<string | null>(null)
-
-//   const [form, setForm] = useState<FormState>({
-//     title: post?.title ?? "",
-//     slug: post?.slug ?? "",
-//     excerpt: post?.excerpt ?? "",
-//     content: post?.content ?? "",
-//     coverImage: post?.coverImage ?? "",
-//     status: post?.status ?? "DRAFT",
-//     tagIds: post?.tags?.map((t) => t.id) ?? [],
-//   })
-
-//   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
-//     setForm((prev) => ({ ...prev, [key]: value }))
-//   }
-
-//   function handleTitleChange(value: string) {
-//     update("title", value)
-//     if (!post) update("slug", generateSlug(value))
-//   }
-
-//   function toggleTag(tagId: string) {
-//     setForm(prev => ({
-//       ...prev,
-//       tagIds: prev.tagIds.includes(tagId) ? prev.tagIds.filter(id => id !== tagId) : [...prev.tagIds, tagId]
-//     }))
-//   }
-
-//   function handleSubmit(submitStatus: PostStatus) {
-//     if (isPending) return
-//     setError(null)
-//     if (!form.title.trim() || !form.slug.trim() || !form.content.trim()) {
-//       setError("Please fill in all required fields.")
-//       return
-//     }
-
-//     setActiveButton(submitStatus)
-//     startTransition(async () => {
-//       const response = post 
-//         ? await updatePost({ ...form, status: submitStatus, id: post.id })
-//         : await createPost({ ...form, status: submitStatus }, authorId)
-      
-//       if (!response.success) setError(response.error)
-//       else {
-//         router.push("/admin/posts")
-//         router.refresh()
-//       }
-//       setActiveButton(null)
-//     })
-//   }
-
-//   return (
-//     <motion.div 
-//       initial="hidden" animate="visible" variants={containerVars}
-//       className="w-full max-w-350 mx-auto flex flex-col gap-8 pb-24"
-//     >
-//       {/* Header */}
-//       <div className="flex flex-col gap-1">
-//         <h1 className="text-3xl font-bold text-white tracking-tight">{post ? 'Edit Post' : 'New Post'}</h1>
-//         <p className="text-sm text-white/40">Draft and publish your thoughts to the world.</p>
-//       </div>
-
-//       <AnimatePresence mode="popLayout">
-//         {error && (
-//           <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-//             className="flex items-center gap-3 p-4 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-400">
-//             <XCircle size={16} /> {error}
-//           </motion.div>
-//         )}
-//       </AnimatePresence>
-
-//       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-//         {/* Main Content Area */}
-//         <div className="lg:col-span-8 flex flex-col gap-8">
-//           <motion.div variants={itemVars} className="space-y-6">
-//             <Field label="Title" required icon={Layout}>
-//               <input
-//                 type="text"
-//                 value={form.title}
-//                 onChange={(e) => handleTitleChange(e.target.value)}
-//                 placeholder="The Future of Web Development..."
-//                 className={`${inputClass} text-xl font-medium py-5 border-white/10`}
-//               />
-//             </Field>
-
-//             <Field label="Slug" required icon={Hash} hint="This will be the URL of your post.">
-//               <input
-//                 type="text"
-//                 value={form.slug}
-//                 onChange={(e) => update("slug", e.target.value)}
-//                 className={inputClass}
-//               />
-//             </Field>
-
-//             <Field label="Excerpt" icon={Layout}>
-//               <textarea
-//                 value={form.excerpt}
-//                 onChange={(e) => update("excerpt", e.target.value)}
-//                 rows={3}
-//                 className={`${inputClass} resize-none`}
-//                 placeholder="A short summary..."
-//               />
-//             </Field>
-
-//             <Field label="Content" required icon={Layout}>
-//               <textarea
-//                 value={form.content}
-//                 onChange={(e) => update("content", e.target.value)}
-//                 rows={20}
-//                 className={`${inputClass} font-mono text-xs leading-relaxed`}
-//                 placeholder="Write your markdown here..."
-//               />
-//             </Field>
-//           </motion.div>
-//         </div>
-
-//         {/* Sidebar Area */}
-//         <div className="lg:col-span-4 flex flex-col gap-6">
-//           {/* Status Card */}
-//           <motion.div variants={itemVars} className="p-6 rounded-2xl border border-white/5 bg-white/1">
-//             <Field label="Visibility" icon={Eye}>
-//               <div className="grid grid-cols-1 gap-2 mt-2">
-//                 {["DRAFT", "PUBLISHED", "ARCHIVED"].map((s) => (
-//                   <button
-//                     key={s}
-//                     type="button"
-//                     onClick={() => update("status", s as PostStatus)}
-//                     className={`px-4 py-2.5 rounded-lg border text-xs font-medium transition-all text-left ${
-//                       form.status === s ? "bg-white/10 border-white/20 text-white" : "border-transparent text-white/30 hover:text-white/50"
-//                     }`}
-//                   >
-//                     {s}
-//                   </button>
-//                 ))}
-//               </div>
-//             </Field>
-//           </motion.div>
-
-//           {/* Cover Image Card */}
-//           <motion.div variants={itemVars} className="p-6 rounded-2xl border border-white/5 bg-white/1">
-//             <Field label="Cover Image" icon={ImageIcon}>
-//               <input
-//                 type="url"
-//                 value={form.coverImage}
-//                 onChange={(e) => update("coverImage", e.target.value)}
-//                 placeholder="https://images.unsplash.com/..."
-//                 className={inputClass}
-//               />
-//               <AnimatePresence>
-//                 {form.coverImage && (
-//                   <motion.img 
-//                     initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-//                     src={form.coverImage} className="mt-4 w-full aspect-video object-cover rounded-xl border border-white/10" 
-//                   />
-//                 )}
-//               </AnimatePresence>
-//             </Field>
-//           </motion.div>
-
-//           {/* Tags Card */}
-//           <motion.div variants={itemVars} className="p-6 rounded-2xl border border-white/5 bg-white/1">
-//             <Field label="Tags" icon={TagIcon}>
-//               <div className="flex flex-wrap gap-2 mt-2">
-//                 {tags.map((tag) => (
-//                   <button
-//                     key={tag.id}
-//                     type="button"
-//                     onClick={() => toggleTag(tag.id)}
-//                     className={`px-3 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
-//                       form.tagIds.includes(tag.id) ? "bg-white text-black border-white" : "border-white/10 text-white/30 hover:border-white/20"
-//                     }`}
-//                   >
-//                     {tag.name.toUpperCase()}
-//                   </button>
-//                 ))}
-//               </div>
-//             </Field>
-//           </motion.div>
-//         </div>
-//       </div>
-
-//       {/* Sticky Bottom Actions */}
-//       <motion.div variants={itemVars} className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 rounded-2xl bg-black/80 backdrop-blur-xl border border-white/10 shadow-2xl z-50">
-//         <button
-//           onClick={() => handleSubmit("PUBLISHED")}
-//           disabled={isPending}
-//           className="flex items-center gap-2 px-6 py-2 rounded-xl bg-white text-black text-xs font-bold hover:bg-white/90 transition-all disabled:opacity-50"
-//         >
-//           {activeButton === "PUBLISHED" ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
-//           Publish
-//         </button>
-//         <button
-//           onClick={() => handleSubmit("DRAFT")}
-//           disabled={isPending}
-//           className="flex items-center gap-2 px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white/60 hover:bg-white/10 transition-all disabled:opacity-50"
-//         >
-//           {activeButton === "DRAFT" ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-//           Save Draft
-//         </button>
-//         <div className="w-px h-4 bg-white/10 mx-2" />
-//         <button onClick={() => router.back()} className="text-xs text-white/20 hover:text-white/50">Cancel</button>
-//       </motion.div>
-//     </motion.div>
-//   )
-// }
-
-
-
-
-
-
-
-
-
-
-
